@@ -1,25 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Builds and runs the cursor-claude-connector (Go) server.
+# - Reads .env from the working directory if present.
+# - The compiled binary is placed at ./cursor-claude-connector and reused on
+#   subsequent runs unless -f/--force is passed.
 
-echo "🚀 Starting Anthropic to OpenAI Proxy Server..."
-echo ""
+set -euo pipefail
 
-# Check if node_modules exists
-if [ ! -d "node_modules" ]; then
-    echo "📦 Installing dependencies..."
-    bun install
-    echo ""
+PORT="${PORT:-9095}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+FORCE=0
+for arg in "$@"; do
+  case "$arg" in
+    -f|--force) FORCE=1 ;;
+    *) echo "unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
+
+# Ensure Go is available.
+if ! command -v go >/dev/null 2>&1; then
+  echo "❌ Go is not installed. Install Go 1.26+ and try again." >&2
+  exit 1
 fi
 
-echo "🔨 Building project..."
-bun run build
+GO_VERSION="$(go version | awk '{print $3}')"
+GO_MAJOR="${GO_VERSION#go}"
+GO_MAJOR="${GO_MAJOR%%.*}"
+if [ "$GO_MAJOR" -lt 26 ]; then
+  echo "❌ Go 1.26+ is required (found $GO_VERSION)." >&2
+  exit 1
+fi
 
+BINARY="./cursor-claude-connector"
 
-echo "🌐 Server starting on http://your-domain.com"
-echo "📚 API Documentation: http://your-domain.com/"
-echo "🔐 OAuth Login: http://your-domain.com/auth/login"
+if [ "$FORCE" = 1 ] || [ ! -x "$BINARY" ]; then
+  echo "🔨 Building..."
+  go build -o "$BINARY" ./cmd/cursor-claude-connector
+fi
+
+echo ""
+echo "🌐 Server starting on http://localhost:$PORT"
+echo "📚 Web UI:        http://localhost:$PORT/"
+echo "🔐 OAuth start:   http://localhost:$PORT/auth/oauth/start"
+echo "📋 List models:   http://localhost:$PORT/v1/models"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-# Start the server with bun and load .env file
-bun run start 
+exec "$BINARY"

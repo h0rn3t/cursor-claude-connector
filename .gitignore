@@ -48,3 +48,10 @@ coverage/
 # Temporary files
 tmp/
 temp/
+
+# Go build artifacts
+cursor-claude-connector
+cursor-claude-connector.exe
+.cursor-claude-connector-pid
+.cursor-claude-connector.log
+

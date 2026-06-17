@@ -6,51 +6,48 @@ This guide will help you connect Cursor with your Claude subscription using this
 
 1. **Active Claude subscription** (Pro or Max)
 2. **Cursor IDE** installed on your local machine
-3. **GitHub account** (for Vercel deployment)
+3. **Go 1.26+** (for source builds) **or Docker** (for container deploys)
+4. **Upstash Redis** account — free tier works
 
 ## 🚀 Deployment Options
 
-### Option 1: Deploy to Vercel (Recommended) ⚡
+### Option 1: Container image (Recommended) 🐳
 
-The easiest way to get started is with our one-click Vercel deployment:
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Maol-1997/cursor-claude-connector&integration-ids=oac_V3R1GIpkoJorr6fqyiwdhl17)
-
-#### What happens when you click:
-
-1. **Fork the repository** - Vercel will create a copy in your GitHub account
-2. **Create Upstash Redis** - Automatically provisions a free Redis database
-3. **Configure environment** - All variables are set up automatically
-4. **Deploy the app** - Your proxy will be live in under 2 minutes!
-
-#### After deployment:
-
-1. Note your deployment URL (e.g., `https://your-app-name.vercel.app`)
-2. Visit `https://your-app-name.vercel.app/` to authenticate with Claude
-3. Configure Cursor with: `https://your-app-name.vercel.app/v1`
-
-### Option 2: Manual Server Deployment
-
-If you prefer to deploy on your own server:
-
-#### 1. Install Bun
+Build and run anywhere — Fly, Render, Railway, a VPS, or your laptop:
 
 ```bash
-# Install Bun
-curl -fsSL https://bun.sh/install | bash
-source ~/.bashrc
+docker build -t cursor-claude-connector .
+docker run --rm -p 9095:9095 \
+  -e UPSTASH_REDIS_REST_URL=... \
+  -e UPSTASH_REDIS_REST_TOKEN=... \
+  -e API_KEY=... \
+  cursor-claude-connector
+```
+
+The image is built from `golang:1.26-alpine` and ships a `distroless/static-debian12` runtime, so the final image is small and contains only the static binary.
+
+### Option 2: Manual server deployment
+
+If you prefer to deploy on your own server with a binary:
+
+#### 1. Install Go 1.26+
+
+```bash
+# macOS
+brew install go
+# Linux
+wget https://go.dev/dl/go1.26.4.linux-amd64.tar.gz
+tar -C /usr/local -xzf go1.26.4.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
 ```
 
 #### 2. Clone and configure
 
 ```bash
-# Clone the repository
 git clone https://github.com/Maol-1997/cursor-claude-connector.git
 cd cursor-claude-connector
-
-# Set up environment variables
 cp env.example .env
-# Edit .env with your Upstash Redis credentials
+# Edit .env with your Upstash credentials
 ```
 
 #### 3. Set up Upstash Redis
@@ -59,20 +56,19 @@ cp env.example .env
 2. Create a new Redis database
 3. Copy the REST URL and REST Token to your `.env` file
 
-#### 4. Start the server
+#### 4. Build and start the server
 
 ```bash
-# Run the start script (default port: 9095)
-./start.sh
-
-# Or with a custom port:
-PORT=3000 ./start.sh
+./start.sh              # builds + runs in one step
+# or:
+make build              # produces ./cursor-claude-connector
+PORT=3000 ./cursor-claude-connector
 ```
 
-The script will:
+The `start.sh` script will:
 
-- Install dependencies automatically
-- Build the project
+- Verify Go 1.26+ is available
+- Build the binary if it's missing
 - Start the server on your specified port
 
 ## 🔐 Claude Authentication
